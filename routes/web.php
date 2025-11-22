@@ -15,3 +15,7 @@ Route::post('/register', [\App\Http\Controllers\AuthController::class,'register_
 
 Route::post('/sendMessage', [\App\Http\Controllers\ChatController::class,'sendMessage'])->name('sendMessage');
 
+
+Route::get('test', function (){
+   Redis::publish('test',json_encode(['salam'=>'sdsdsd']));
+});
