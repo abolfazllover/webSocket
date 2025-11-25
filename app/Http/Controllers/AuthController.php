@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthController extends Controller
 {
@@ -21,6 +22,7 @@ class AuthController extends Controller
 
         return  view('welcome',[
             'user'=>$user,
+            'jwtToken'=>JWTAuth::fromUser($user),
             'users'=>User::where('id','!=',$user->id)->get(),
         ]);
    }

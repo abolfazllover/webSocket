@@ -3,6 +3,7 @@ import { createClient } from "redis";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import { createAdapter } from "@socket.io/redis-adapter";
+import jwt from "jsonwebtoken";
 
 export default class WebSocketCoreOptimized {
 
@@ -70,13 +71,28 @@ export default class WebSocketCoreOptimized {
         this.io.adapter(createAdapter(this.pubClient, this.subClient));
 
         this.io.on("connection", async socket => {
-            const token = socket.handshake.auth.token;
+            const JWTtoken = socket.handshake.auth.token;
 
-            console.log("User connected:", token, socket.id);
+
+            if (!JWTtoken) {
+                console.log("⛔ Token not provided");
+                socket.disconnect();
+                return;
+            }
+
+            let decoded = null;
+
+            try {
+                decoded = jwt.verify(JWTtoken, 'o9MYQoIeusn00kj9OyKSOC8jP8UmK6HFn4DWhE8Phq7krkS01R5TxNxHeOJTiAuI'); // ← همون کلیدی که لاراول استفاده می‌کنه
+            } catch (err) {
+                console.log("⛔ Invalid token:", err.message);
+                socket.disconnect();
+                return;
+            }
 
             // ذخیره در Hash ها برای O(1) lookup
-            await this.db.hSet("users", token, socket.id);
-            await this.db.hSet("sockets", socket.id, token);
+            await this.db.hSet("users", decoded.sub, socket.id);
+            await this.db.hSet("sockets", socket.id, decoded.id);
 
             if (this.socketHandlers["connection"]) {
                 this.socketHandlers["connection"](socket, this);
@@ -95,7 +111,7 @@ export default class WebSocketCoreOptimized {
                 if (this.socketHandlers["disconnect"]) {
                     this.socketHandlers["disconnect"](socket, this);
                 }
-                await this.db.hDel("users", token);
+                await this.db.hDel("users", decoded.sub);
                 await this.db.hDel("sockets", socket.id);
             });
         });
@@ -106,15 +122,23 @@ export default class WebSocketCoreOptimized {
     /**
      * Get socketId from token
      */
-    async getSocketIdFromToken(token) {
-        return this.db.hGet("users", token);
+    async getSocketIdFromID(id) {
+        return this.db.hGet("users", id);
     }
 
     /**
      * Get token from socketId (optimized O(1))
      */
-    async getTokenFromSocketId(socketId) {
+    async getIDFromSocketId(socketId) {
         return this.db.hGet("sockets", socketId);
+    }
+
+
+    async messageToServer(socket,action,msg){
+        msg=JSON.parse(msg);
+        msg['action']=action;
+        msg['fromID']=await this.getIDFromSocketId(socket.id);
+        return this.db.publish('server_message',JSON.stringify(msg))
     }
 
 

@@ -14,7 +14,7 @@ class ChatController extends Controller
     public $redisMessager;
     public function __construct(Request $request)
     {
-        $this->userSender=User::where('token',$request->get('token'))->first();
+        $this->userSender=User::find($request->get('id'));
         $this->redisMessager=new RedisMessagerController();
     }
 

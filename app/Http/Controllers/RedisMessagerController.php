@@ -11,8 +11,8 @@ class RedisMessagerController extends Controller
     function new_message(ChatModel $chatModel){
         $chat=[
             'message' => $chatModel->message,
-            'token_from'=>$chatModel->token_from(),
-            'token_to'=>$chatModel->token_to(),
+            'from_id'=>$chatModel->from_id,
+            'to_id'=>$chatModel->to_id,
         ];
         Redis::publish('new_message',json_encode($chat));
     }

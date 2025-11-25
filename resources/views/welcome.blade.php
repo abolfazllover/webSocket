@@ -67,7 +67,7 @@
            <h3>لیست کاربران</h3>
             <div class="ui divider"></div>
             @foreach($users as $us)
-                <h4 data-token="{{$us->token}}" onclick="changeChat({{$us->id}},'{{$us->email}}','{{$us->name}}')" class="bd_item_user ui blue header">
+                <h4 data-id="{{$us->id}}" onclick="changeChat({{$us->id}},'{{$us->email}}','{{$us->name}}')" class="bd_item_user ui blue header">
                     <i class="user grey icon"></i>
                     <div class="content">
                        <span> {{$us->name}}</span>
@@ -88,11 +88,11 @@
 
 <script>
     var userIdSelected="{{$users[0]['id']}}";
-    const token="{{$user->token}}";
+    const myID="{{$user->id}}";
 
     const socket=io('http://127.0.0.1:3000',{
         auth : {
-            token : token,
+            token : '{{$jwtToken}}',
         }
     });
 
@@ -102,14 +102,13 @@
 
     function changeChat(userId, email, name) {
         userIdSelected=userId;
-        $("#headerChat .header span").html(name)
-        $("#headerChat .header .sub").html(email)
+        socket.emit('changeChat',JSON.stringify({'userID' : userId}))
     }
 
 
     function sendMessage() {
         var message=$('#inp_message').val();
-        var data={'token' : token, 'to' : userIdSelected,'message' : message}
+        var data={'id' : myID, 'to' : userIdSelected,'message' : message}
         ajax_sender("{{route('sendMessage')}}",data,'post',function (a) {
             console.log(a)
         })
@@ -127,19 +126,26 @@
 
     socket.on("new_message", (data) => {
         console.log("پیام دریافت شد:", data);
-        generateItemMessage(data.message,data.token_from===token);
+        generateItemMessage(data.message,data.from_id==myID);
     });
+    socket.on('update_messages',(messages)=>{
+        $('.bd_messages *').remove();
+       messages.forEach(function (a) {
+           generateItemMessage(a.message,a.from_id==myID)
+       })
+    })
 
     socket.on("change_status", (data) => {
 
         console.log(data);
         console.log(data.is_online);
         if(data.is_online){
-            $(`.bd_item_user[data-token=${data.userToken}`).find('.status').show()
+            $(`.bd_item_user[data-id=${data.id}]`).find('.status').show()
         }else {
-            $(`.bd_item_user[data-token=${data.userToken}`).find('.status').hide()
+            $(`.bd_item_user[data-id=${data.id}]`).find('.status').hide()
         }
     });
+
 
 
 </script>
