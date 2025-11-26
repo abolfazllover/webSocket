@@ -17,5 +17,9 @@ Route::post('/sendMessage', [\App\Http\Controllers\ChatController::class,'sendMe
 
 
 Route::get('test', function (){
-   Redis::publish('test',json_encode(['salam'=>'sdsdsd']));
+
+//   Redis::publish('test',json_encode(['salam'=>'sdsdsd']));
+  $result= \Junges\Kafka\Facades\Kafka::publish()->onTopic('test-topic') ->withBodyKey('message', ['hello'=>'سلام رضا'])->send();
+  dd($result);
+
 });
